@@ -1,0 +1,378 @@
+package genesis;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public final class Genesis {
+	
+	public static final String name = "Genesis";
+	public static final String version = "1.0";
+	
+	public static void main(String[] args) {
+		try {
+			new Genesis();
+		} catch (Throwable t) {
+			printError(new PrintWriter(System.err), t);
+		}
+	}
+	
+	private final FileManager fm;
+	protected String last = null;
+	
+	public Genesis() throws Throwable {
+		log("Initializing " + toString() + "...");
+		log("Generating files...");
+		fm = new FileManager(this);
+		log(toString() + " started on " + System.getProperty("os.name"));
+		start();
+		stop();
+	}
+	
+	public void stop() {
+		stop(0);
+	}
+	
+	public void stop(int error) {
+		if (error == 0)
+			log(toString() + " shut down successfully!");
+		else
+			log(toString() + " shut down with error code: " + error);
+		if (fm != null)
+			fm.close();
+		System.exit(error);
+	}
+	
+	public void start() {
+		try (BufferedReader r = new BufferedReader(new InputStreamReader(System.in))) {
+			System.out.print("You: ");
+			String s = r.readLine();
+			if (respond(s))
+				start();
+		} catch (Throwable t) {
+			printError(t);
+		}
+	}
+	
+	public boolean respond(String s) {
+		if (s.trim().equals(""))
+			return true;
+		String response = "";
+		if (last == null) {
+			boolean newg = true;
+			try {
+				for (String r : fm.getResponses(ResponseType.GREETING)) {
+					if (strip(s).equalsIgnoreCase(strip(r)))
+						newg = false;
+				}
+			} catch (Throwable t) {}
+			if (newg)
+				fm.setResponse(ResponseType.GREETING, removeEndPunc(s));
+			System.out.println(response = (name + ": " + format(fm.getResponses(ResponseType.GREETING).get((int) (System.nanoTime() % fm.getResponses(ResponseType.GREETING).size())))));
+		} else {
+			boolean notg = true;
+			try {
+				for (String r : fm.getResponses(ResponseType.GREETING)) {
+					if (strip(last).equalsIgnoreCase(strip(r)))
+						notg = false;
+				}
+			} catch (Throwable t) {}
+			boolean notf = true;
+			try {
+				for (String r : fm.getResponses(ResponseType.FAREWELL)) {
+					if (strip(s).equalsIgnoreCase(strip(r)))
+						notf = false;
+				}
+			} catch (Throwable t) {}
+			if ((!notf || s.equalsIgnoreCase("exit")) && notg) {
+				boolean newf = true;
+				try {
+					for (String r : fm.getResponses(ResponseType.GREETING)) {
+						if (strip(last).equalsIgnoreCase(strip(r)))
+							newf = false;
+					}
+				} catch (Throwable t) {}
+				if (newf)
+					fm.setResponse(ResponseType.FAREWELL, removeEndPunc(last));
+				System.out.println(response = (name + ": " + format(fm.getResponses(ResponseType.FAREWELL).get((int) (System.nanoTime() % fm.getResponses(ResponseType.FAREWELL).size())))));
+				return false;
+			}
+		}
+		
+		boolean containsLaugh = false;
+		try {
+			for (String r : fm.getResponses(ResponseType.LAUGH)) {
+				if (s.matches(".*?\\b" + r + "\\b.*?"))
+					containsLaugh = true;
+			}
+		} catch (Throwable t) {}
+		boolean laughIfPossible = false;
+		int laugh = 0;
+		for (char c : s.toCharArray()) {
+			if (c == 'h' || c == 'l')
+				laugh++;
+		}
+		if (laugh > s.toCharArray().length / 2) {
+			try {
+				boolean newl = true;
+				try {
+					for (String r : fm.getResponses(ResponseType.LAUGH)) {
+						if (strip(s).equalsIgnoreCase(strip(r)))
+							newl = false;
+					}
+				} catch (Throwable t) {}
+				if (newl)
+					fm.setResponse(ResponseType.LAUGH, removeEndPunc(s));
+				laughIfPossible = true;
+			} catch (Throwable t) {
+				printError(t);
+			}
+		}
+		
+		if (!containsLaugh) {
+			String[] set = s.split("(\\s+is\\s+|\\'s\\s+)");
+			try {
+				System.out.println(response = (name + ": " + solve(strip(set[1]).trim())));
+			} catch (Throwable t) {
+				String ek = strip(set[0]).toLowerCase();
+				if (ek.contains("what")) {
+					String k = strip(reversePerson(join(set, "is", 1).toLowerCase()));
+					try {
+						for (String values : fm.getResponses(ResponseType.VALUE)) {
+							if (strip(values.split("§=§")[0]).trim().equalsIgnoreCase(k))
+								response = name + ": " + cap(k) + " is " + values.split("§=§")[1].trim() + punc();
+						}
+						if (!response.equals(""))
+							System.out.println(response);
+					} catch (Throwable t2) {}
+				} else if (s.contains(" is ")) {
+					String k = reversePerson(s.split(" is ")[0].toLowerCase().trim());
+					String v = join(s.split(" is "), "is", 1).toLowerCase().trim();
+					fm.setResponse(ResponseType.VALUE, k + "§=§" + reversePerson(removeEndPunc(v)));
+					System.out.println(response = (name + ": " + cap(k) + " is " + removeEndPunc(v) + punc()));
+				}
+			}
+		}
+		if (response.trim().equals("") && (laughIfPossible || containsLaugh))
+			System.out.println(response = (name + ": " + cap(fm.getResponses(ResponseType.LAUGH).get((int) (System.nanoTime() % fm.getResponses(ResponseType.LAUGH).size())))));
+		fm.log("You: " + s);
+		fm.log(name + ": " + (response.replace(name + ": ", "")));
+		last = s;
+		return true;
+	}
+	
+	private static String join(String[] set, String medium, int start) {
+		String s = set[start];
+		int i = 0;
+		for (String part : set) {
+			if (i > start)
+				s = s + " " + medium + " " + part;
+			i++;
+		}
+		return s;
+	}
+	
+	private static String reversePerson(String s) {
+		return s.replaceAll("\\byour\\b", "§§m§§y§§").replaceAll("\\byou\\b", "§§m§§e§§").replaceAll("\\bme\\b", "you").replaceAll("\\bmy\\b", "your").replaceAll("\\byours\\b", "§§mi§§ne§§").replaceAll("\\bmine\\b", "yours").replace("§§", "").trim();
+	}
+	
+	public static double solve(String c) {
+		Pattern p = Pattern.compile("(\\d+|\\d+\\.\\d+)\\s*(\\+|\\-|\\*|\\/|\\%|\\|)\\s*(\\d+|\\d+\\.\\d+).*");
+		Matcher m = p.matcher(c);
+		if (m.matches()) {
+			Double d1 = Double.parseDouble(m.group(1));
+			Double d2 = Double.parseDouble(m.group(3));
+			while (c.contains("+") || c.contains("-") || c.contains("*") || c.contains("/") || c.contains("%") || c.contains("|")) {
+				c = c.replaceAll("(\\d)\\.0(\\D)", "$1$2");
+				m = p.matcher(c);
+				m.matches();
+				switch (m.group(2)) {
+					default:
+						break;
+					case "+":
+						c = c.replaceAll("[" + d1 + "]\\s*\\+\\s*[" + d2 + "]", (d1 + d2) + "");
+						break;
+					case "-":
+						c = c.replaceAll("[" + d1 + "]\\s*\\-\\s*[" + d2 + "]", (d1 - d2) + "");
+						break;
+					case "*":
+						c = c.replaceAll("[" + d1 + "]\\s*\\*\\s*[" + d2 + "]", (d1 * d2) + "");
+						break;
+					case "/":
+						c = c.replaceAll("[" + d1 + "]\\s*\\/\\s*[" + d2 + "]", (d1 / d2) + "");
+						break;
+					case "%":
+						c = c.replaceAll("[" + d1 + "]\\s*%\\s*[" + d2 + "]", (d1 % d2) + "");
+						break;
+					case "|":
+						c = c.replaceAll("[" + d1 + "]\\s*\\|\\s*[" + d2 + "]", (Integer.parseInt((d1 + "").replace(".0", "")) | Integer.parseInt((d2 + "").replace(".0", ""))) + "");
+						break;
+				}
+			}
+		}
+		return Double.parseDouble(c);
+	}
+	
+	private static String strip(String s) {
+		return s.toLowerCase().replace("?", "").replace(".", "").replace("!", "").replace(",", "").replace("_", "").replace("~", "").replace("`", "").replace("'", "").replace("\"", "").replace("\"", "").replace("\\", "").replace(":", "").replace(";", "").replace("the", " ").replace("teh", " ").replace("how do", "how can").replace("re", "").replace(" a ", " ").replace("is", "").replace("has", "").replace("get to", "go to").replaceAll("\\Bs\\b", "").replaceAll(" {2}?", "").trim();
+	}
+	
+	private static String removeEndPunc(String s) {
+		return s.replaceAll("[!\\.\\?]+$", "");
+	}
+	
+	private static String format(String s) {
+		char p = ' ';
+		switch ((int) System.nanoTime() % 5) {
+			default:
+			case 0:
+			case 1:
+			case 2:
+				p = '.';
+				break;
+			case 3:
+				p = '!';
+				break;
+			case 4:
+				p = '?';
+				break;
+		}
+		try {
+			return s.replace(s.substring(0, 1), s.substring(0, 1).toUpperCase()) + p;
+		} catch (Throwable t) {
+			return s.toUpperCase() + p;
+		}
+	}
+	
+	private static String cap(String s) {
+		return s.replaceFirst(s.substring(0, 1), s.substring(0, 1).toUpperCase());
+	}
+	
+	private static char punc() {
+		switch ((int) System.nanoTime() % 5) {
+			default:
+			case 0:
+			case 1:
+			case 2:
+			case 3:
+				return '.';
+			case 4:
+				return '!';
+		}
+	}
+	
+	public FileManager getFileManager() {
+		return fm;
+	}
+	
+	public void printError(Throwable t) {
+		printError(System.err, t);
+		if (fm != null)
+			printError(fm.getLogStream(), t);
+		stop(1);
+	}
+	
+	private static void printError(PrintStream out, Throwable t) {
+		out.println();
+		out.println("A fatal error occurred: " + t.toString());
+		out.println();
+		out.println("-----=[General Stack Trace]=-----");
+		for (StackTraceElement s : t.getStackTrace())
+			out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+		out.println("-----=[" + name + " Stack Trace]=-----");
+		out.println();
+		out.println("-----=[" + name + " Stack Trace]=-----");
+		boolean fault = false;
+		for (StackTraceElement s : t.getStackTrace()) {
+			if (s.getClassName().startsWith("genesis")) {
+				out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				fault = true;
+			}
+		}
+		if (!fault)
+			out.println("This doesn't look like a problem relating to " + name + ". Check the above general stack trace.");
+		out.println("-----=[Genesis Stack Trace]=-----");
+		out.println();
+		out.println("-----=[Remote Stack Trace]=-----");
+		fault = false;
+		for (StackTraceElement s : t.getStackTrace()) {
+			if (!s.getClassName().startsWith("genesis")) {
+				out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				fault = true;
+			}
+		}
+		if (!fault)
+			out.println("This doesn't look like a problem with anything outside " + name + ". Check the above " + name + " stack trace.");
+		out.println("-----=[Remote Stack Trace]=-----");
+		out.println();
+	}
+	
+	private static void printError(PrintWriter out, Throwable t) {
+		out.println();
+		out.println("A fatal error occurred: " + t.toString());
+		out.println();
+		out.println("-----=[General Stack Trace]=-----");
+		for (StackTraceElement s : t.getStackTrace())
+			out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+		out.println("-----=[General Stack Trace]=-----");
+		out.println();
+		out.println("-----=[" + name + " Stack Trace]=-----");
+		boolean fault = false;
+		for (StackTraceElement s : t.getStackTrace()) {
+			if (s.getClassName().startsWith("genesis")) {
+				out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				fault = true;
+			}
+		}
+		if (!fault)
+			out.println("This doesn't look like a problem relating to " + name + ". Check the above general stack trace.");
+		out.println("-----=[" + name + " Stack Trace]=-----");
+		out.println();
+		out.println("-----=[Remote Stack Trace]=-----");
+		fault = false;
+		for (StackTraceElement s : t.getStackTrace()) {
+			if (!s.getClassName().startsWith("genesis")) {
+				out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				fault = true;
+			}
+		}
+		if (!fault)
+			out.println("This doesn't look like a problem with anything outside " + name + ". Check the above " + name + " stack trace.");
+		out.println("-----=[Remote Stack Trace]=-----");
+		out.println();
+		out.flush();
+	}
+	
+	public void log(String message) {
+		log(System.out, message);
+	}
+	
+	public void log(PrintStream out, String message) {
+		String hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR) + "";
+		String minute = java.util.Calendar.getInstance().get(java.util.Calendar.MINUTE) + "";
+		String second = java.util.Calendar.getInstance().get(java.util.Calendar.SECOND) + "";
+		int ampm = java.util.Calendar.getInstance().get(java.util.Calendar.AM_PM);
+		
+		if (Integer.parseInt(hour) < 10)
+			hour = "0" + hour;
+		if (Integer.parseInt(minute) < 10)
+			minute = "0" + minute;
+		if (Integer.parseInt(second) < 10)
+			second = "0" + second;
+		
+		String timestamp = "[" + hour + ":" + minute + ":" + second + ":" + (ampm == 0 ? "AM" : "PM") + "]";
+		
+		out.println(timestamp + ": " + message);
+		
+		if (fm != null)
+			fm.log(message);
+	}
+	
+	public String toString() {
+		return name + " v" + version;
+	}
+	
+}
