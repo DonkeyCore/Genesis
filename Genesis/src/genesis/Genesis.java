@@ -213,29 +213,12 @@ public final class Genesis {
 	}
 	
 	private static String format(String s) {
-		char p = ' ';
-		switch((int) System.nanoTime() % 5) {
-			default:
-			case 0:
-			case 1:
-			case 2:
-				p = '.';
-				break;
-			case 3:
-				p = '!';
-				break;
-			case 4:
-				p = '?';
-				break;
-		}
-		try {
-			return s.replace(s.substring(0, 1), s.substring(0, 1).toUpperCase()) + p;
-		} catch(Throwable t) {
-			return s.toUpperCase() + p;
-		}
+		return cap(s) + punc();
 	}
 	
 	private static String cap(String s) {
+		if(s.length() < 1)
+			return s;
 		return s.replaceFirst(s.substring(0, 1), s.substring(0, 1).toUpperCase());
 	}
 	
