@@ -64,10 +64,10 @@ public final class FileManager {
 			String line;
 			while ((line = r.readLine()) != null) {
 				for (ResponseType rt : ResponseType.values()) {
-					if (line.split("§")[0].equalsIgnoreCase(rt.name())) {
+					if (line.split("ï¿½")[0].equalsIgnoreCase(rt.name())) {
 						String response = "";
-						for (int i = 1; i < line.split("§").length; i++)
-							response = line.split("§")[i].trim();
+						for (int i = 1; i < line.split("ï¿½").length; i++)
+							response = line.split("ï¿½")[i].trim();
 						if (res.get(rt) == null) {
 							List<String> list = new ArrayList<String>();
 							list.add(response);
@@ -91,8 +91,8 @@ public final class FileManager {
 		try (BufferedReader r = new BufferedReader(new FileReader(resp))) {
 			String line;
 			while ((line = r.readLine()) != null) {
-				if (line.split("§")[0].equalsIgnoreCase(rt.name()))
-					res.add(line.split("§")[1].trim());
+				if (line.split("ï¿½")[0].equalsIgnoreCase(rt.name()))
+					res.add(line.split("ï¿½")[1].trim());
 			}
 		} catch (Throwable t) {
 			g.printError(t);
@@ -105,10 +105,10 @@ public final class FileManager {
 		try (BufferedReader r = new BufferedReader(new FileReader(resp))) {
 			String s;
 			while ((s = r.readLine()) != null) {
-				if (s.equals(type.toString() + "§ " + response))
+				if (s.equals(type.toString() + "ï¿½ " + response))
 					return;
 			}
-			rout.println(type.toString() + "§ " + response);
+			rout.println(type.toString() + "ï¿½ " + response);
 			rout.flush();
 		} catch (Throwable t) {
 			g.printError(t);
