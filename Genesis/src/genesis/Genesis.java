@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -86,16 +87,20 @@ public final class Genesis {
 				if(transform(s).equalsIgnoreCase(transform(r)))
 					notf = false;
 			}
-			if((!notf || s.equalsIgnoreCase("exit")) && notg) {
-				boolean newf = true;
-				for(String r : fm.getResponses(ResponseType.FAREWELL)) { //check if it's a new farewell
-					if(transform(last).equalsIgnoreCase(transform(r)))
-						newf = false;
+			if(!notf || s.equalsIgnoreCase("exit")) { //giving a farewell & last message isn't a greeting
+				List<String> f = fm.getResponses(ResponseType.FAREWELL);
+				if(s.equalsIgnoreCase("exit") && notg) {
+					boolean newf = true;
+					for(String r : f) { //check if it's a new farewell
+						if(transform(last).equalsIgnoreCase(transform(r)))
+							newf = false;
+					}
+					if(newf) //if it's new, store it for another session (or this one) IF AND ONLY IF we are using "exit"
+						fm.setResponse(ResponseType.FAREWELL, removeEndPunc(last));
 				}
-				if(newf) //if it's new, store it for another session (or this one)
-					fm.setResponse(ResponseType.FAREWELL, removeEndPunc(last));
 				//say bye back
-				System.out.println(response = (name + ": " + format(fm.getResponses(ResponseType.FAREWELL).get((int) (System.nanoTime() % fm.getResponses(ResponseType.FAREWELL).size())))));
+				if(f != null && f.size() > 0)
+					System.out.println(response = (name + ": " + format(f.get((int) (System.nanoTime() % f.size())))));
 				return false; //exit the program
 			}
 		}
@@ -110,7 +115,7 @@ public final class Genesis {
 			if(c == 'h' || c == 'l')
 				laugh++;
 		}
-		if(laugh > s.toCharArray().length / 2 && !fm.getResponses(ResponseType.GREETING).stream().anyMatch((g) -> {
+		if(laugh >= s.toCharArray().length / 2 && !fm.getResponses(ResponseType.GREETING).stream().anyMatch((g) -> {
 			return transform(g).equalsIgnoreCase(transform(s));
 		})) {
 			boolean newl = true;
@@ -123,12 +128,12 @@ public final class Genesis {
 			laughIfPossible = true;
 		}
 		if(!containsLaugh) {
-			String[] set = s.split("(\\s+is\\s+|\\'s\\s+)");
+			String[] set = s.split("(?i)(\\s+is\\s+|\\'s\\s+)");
 			try { //if it's math, solve it
 				System.out.println(response = (name + ": " + solve(transform(set[1]).trim())));
 			} catch(Throwable t) { //it's not math
 				String ek = transform(set[0]);
-				if(ek.contains("what")) {
+				if(ek.toLowerCase().contains("what")) {
 					String k = transform(reversePerson(join(set, "is", 1)));
 					for(String values : fm.getResponses(ResponseType.VALUE)) {
 						if(transform(values.split("§=§")[0]).trim().equalsIgnoreCase(k))
@@ -136,7 +141,7 @@ public final class Genesis {
 					}
 					if(!response.equals(""))
 						System.out.println(response);
-				} else if(s.contains(" is ")) {
+				} else if(s.toLowerCase().contains(" is ")) {
 					String k = reversePerson(s.split(" is ")[0].trim());
 					String v = join(s.split("(?i) (is) "), "$1%s", 1).trim();
 					fm.setResponse(ResponseType.VALUE, k + "§=§" + reversePerson(removeEndPunc(v)));
