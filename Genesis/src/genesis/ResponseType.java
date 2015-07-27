@@ -9,8 +9,8 @@ public enum ResponseType {
 	}
 	
 	public static ResponseType getResponseType(String name) {
-		for(ResponseType r : values()) {
-			if(r.name().equalsIgnoreCase(name))
+		for (ResponseType r : values()) {
+			if (r.name().equalsIgnoreCase(name))
 				return r;
 		}
 		return null;
