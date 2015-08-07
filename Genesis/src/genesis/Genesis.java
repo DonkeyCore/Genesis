@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,19 +19,19 @@ public final class Genesis {
 		try {
 			new Genesis();
 		} catch (IOException e) {
-			printError(new PrintWriter(System.err), e);
+			logError(Thread.currentThread(), e);
 		}
 	}
 	
-	private final FileManager fm;
-	protected String last = null;
+	private final IOManager iomanager;
+	private String lastMessage;
 	
 	public Genesis() throws IOException {
-		Thread.setDefaultUncaughtExceptionHandler(Genesis::printError);
+		Thread.setDefaultUncaughtExceptionHandler(Genesis::logError);
 		log("Initializing " + toString() + "...");
 		log("Generating files...");
-		fm = new FileManager(this);
-		log(toString() + " started on " + System.getProperty("os.name"));
+		iomanager = new IOManager(this);
+		log(toString() + " started on " + System.getProperty("os.name"), true);
 		start();
 		stop();
 	}
@@ -39,14 +40,12 @@ public final class Genesis {
 		stop(0);
 	}
 	
-	public void stop(int error) {
+	public static void stop(int error) {
 		if (error == 0)
-			log(toString() + " shut down successfully!");
-		else
-			log(toString() + " shut down with error code: " + error);
-		if (fm != null) {
-			fm.getLogStream().println();
-			fm.close();
+			log(name + " v" + version + " shut down successfully!", true);
+		else {
+			log("Uh oh! Something bad happened: please report the error code below and attach the most recent log file.");
+			log(name + " v" + version + " shut down with error code: " + error, true);
 		}
 		System.exit(error);
 	}
@@ -58,103 +57,111 @@ public final class Genesis {
 			if (respond(s))
 				start();
 		} catch (Throwable t) {
-			printError(t);
+			if (iomanager != null)
+				logError(t, 1);
 		}
 	}
 	
-	public boolean respond(String s) {
-		if (s.trim().equals(""))
+	public boolean respond(String message) {
+		if (message.trim().equals(""))
 			return true;
 		String response = "";
-		if (last == null) {
-			if (s.trim().equalsIgnoreCase("exit"))
+		if (lastMessage == null) {
+			if (message.trim().equalsIgnoreCase("exit"))
 				return false;
-			boolean newg = true;
-			for (String r : fm.getResponses(ResponseType.GREETING)) {
-				if (transform(s).equalsIgnoreCase(transform(r)))
-					newg = false;
+			boolean newGreeting = true;
+			for (String r : iomanager.getResponses(ResponseType.GREETING)) {
+				if (transform(message).equalsIgnoreCase(transform(r)))
+					newGreeting = false;
 			}
-			if (newg)
-				fm.setResponse(ResponseType.GREETING, removeEndPunc(s));
-			System.out.println(response = (name + ": " + format(fm.getResponses(ResponseType.GREETING).get((int) (System.nanoTime() % fm.getResponses(ResponseType.GREETING).size())))));
+			if (newGreeting)
+				iomanager.setResponse(ResponseType.GREETING, removeEndPunctuation(message));
+			response = (name + ": " + format(iomanager.getResponses(ResponseType.GREETING).get((int) (System.nanoTime() % iomanager.getResponses(ResponseType.GREETING).size()))));
+			System.out.println(response);
 		} else {
-			boolean notg = true;
-			for (String r : fm.getResponses(ResponseType.GREETING)) { //check if THE LAST MESSAGE is another greeting
-				if (transform(last).equalsIgnoreCase(transform(r)))
-					notg = false;
+			boolean isGreeting = false;
+			for (String r : iomanager.getResponses(ResponseType.GREETING)) { //check if THE LAST MESSAGE is another greeting
+				if (transform(lastMessage).equalsIgnoreCase(transform(r)))
+					isGreeting = true;
 			}
-			boolean notf = true;
-			for (String r : fm.getResponses(ResponseType.FAREWELL)) {
-				if (transform(s).equalsIgnoreCase(transform(r)))
-					notf = false;
+			boolean isFarewell = false;
+			for (String r : iomanager.getResponses(ResponseType.FAREWELL)) {
+				if (transform(message).equalsIgnoreCase(transform(r)))
+					isFarewell = true;
 			}
-			if (!notf || s.equalsIgnoreCase("exit")) { //giving a farewell & last message isn't a greeting
-				List<String> f = fm.getResponses(ResponseType.FAREWELL);
-				if (s.equalsIgnoreCase("exit") && notg) {
-					boolean newf = true;
+			if (isFarewell || message.equalsIgnoreCase("exit")) { //giving a farewell & last message isn't a greeting
+				List<String> f = iomanager.getResponses(ResponseType.FAREWELL);
+				if (message.equalsIgnoreCase("exit") && !isGreeting) {
+					boolean newFarewell = true;
 					for (String r : f) { //check if it's a new farewell
-						if (transform(last).equalsIgnoreCase(transform(r)))
-							newf = false;
+						if (transform(lastMessage).equalsIgnoreCase(transform(r)))
+							newFarewell = false;
 					}
-					if (newf) //if it's new, store it for another session (or this one) IF AND ONLY IF we are using "exit"
-						fm.setResponse(ResponseType.FAREWELL, removeEndPunc(last));
+					if (newFarewell) //if it's new, store it for another session (or this one) IF AND ONLY IF we are using "exit"
+						iomanager.setResponse(ResponseType.FAREWELL, removeEndPunctuation(lastMessage));
 				}
 				//say bye back
-				if (f != null && f.size() > 0)
-					System.out.println(response = (name + ": " + format(f.get((int) (System.nanoTime() % f.size())))));
+				if (f != null && f.size() > 0) {
+					response = (name + ": " + format(f.get((int) (System.nanoTime() % f.size()))));
+					System.out.println(response);
+				}
 				return false; //exit the program
 			}
 		}
 		boolean containsLaugh = false;
-		for (String r : fm.getResponses(ResponseType.LAUGH)) {
-			if (s.matches(".*?\\b" + r + "\\b.*?"))
+		for (String r : iomanager.getResponses(ResponseType.LAUGH)) {
+			if (message.matches(".*?\\b" + r + "\\b.*?"))
 				containsLaugh = true;
 		}
 		boolean laughIfPossible = false;
-		int laugh = 0;
-		for (char c : s.toCharArray()) {
-			if (c == 'h' || c == 'l')
-				laugh++;
+		int laughCounter = 0;
+		for (char c : message.toCharArray()) {
+			if (c == 'h' || c == 'l') //measure the h's in l's in a message to determine a laugh (e.g. lolol or haha)
+				laughCounter++;
 		}
-		if (laugh >= s.toCharArray().length / 2 && !fm.getResponses(ResponseType.GREETING).stream().anyMatch((g) -> {
-			return transform(g).equalsIgnoreCase(transform(s));
+		if (laughCounter >= message.toCharArray().length / 2 && !iomanager.getResponses(ResponseType.GREETING).stream().anyMatch((g) -> {
+			return transform(g).equalsIgnoreCase(transform(message));
 		})) {
-			boolean newl = true;
-			for (String r : fm.getResponses(ResponseType.LAUGH)) {
-				if (transform(s).equalsIgnoreCase(transform(r)))
-					newl = false;
+			boolean newLaugh = true;
+			for (String r : iomanager.getResponses(ResponseType.LAUGH)) {
+				if (transform(message).equalsIgnoreCase(transform(r)))
+					newLaugh = false;
 			}
-			if (newl)
-				fm.setResponse(ResponseType.LAUGH, removeEndPunc(s));
+			if (newLaugh)
+				iomanager.setResponse(ResponseType.LAUGH, removeEndPunctuation(message));
 			laughIfPossible = true;
 		}
 		if (!containsLaugh) {
-			String[] set = s.split("(?i)(\\s+is\\s+|\\'s\\s+)");
+			String[] set = message.split("(?i)(\\s+is\\s+|\\'s\\s+)");
 			try { //if it's math, solve it
-				System.out.println(response = (name + ": " + solve(transform(set[1]).trim())));
+				response = (name + ": " + solve(transform(set[1]).trim()));
+				System.out.println(response);
 			} catch (Throwable t) { //it's not math
-				String ek = transform(set[0]);
-				if (ek.toLowerCase().contains("what")) {
-					String k = transform(reversePerson(join(set, "is", 1)));
-					for (String values : fm.getResponses(ResponseType.VALUE)) {
-						if (transform(values.split("§=§")[0]).trim().equalsIgnoreCase(k))
-							response = name + ": " + cap(k) + " is " + values.split("§=§")[1].trim() + punc();
+				String rawKey = transform(set[0]);
+				if (rawKey.toLowerCase().contains("what")) {
+					String key = transform(reversePerson(join(set, "is", 1)));
+					for (String values : iomanager.getResponses(ResponseType.VALUE)) {
+						if (transform(values.split("��=��")[0]).trim().equalsIgnoreCase(key))
+							response = name + ": " + capitalize(key) + " is " + values.split("��=��")[1].trim() + addPunctuation();
 					}
 					if (!response.equals(""))
 						System.out.println(response);
-				} else if (s.toLowerCase().contains(" is ")) {
-					String k = reversePerson(s.split(" is ")[0].trim());
-					String v = join(s.split("(?i) (is) "), "$1%s", 1).trim();
-					fm.setResponse(ResponseType.VALUE, k + "§=§" + reversePerson(removeEndPunc(v)));
-					System.out.println(response = (name + ": " + cap(k) + " is " + removeEndPunc(v) + punc()));
+				} else if (message.toLowerCase().contains(" is ")) {
+					String key = reversePerson(message.split(" is ")[0].trim());
+					String value = join(message.split("(?i) (is) "), "$1%s", 1).trim();
+					iomanager.setResponse(ResponseType.VALUE, key + "��=��" + reversePerson(removeEndPunctuation(value)));
+					response = (name + ": " + capitalize(key) + " is " + removeEndPunctuation(value) + addPunctuation());
+					System.out.println(response);
 				}
 			}
 		}
-		if (response.trim().equals("") && (laughIfPossible || containsLaugh))
-			System.out.println(response = (name + ": " + cap(fm.getResponses(ResponseType.LAUGH).get(((int) (System.nanoTime() % fm.getResponses(ResponseType.LAUGH).size()))))));
-		fm.log("You: " + s);
-		fm.log(name + ": " + (response.replace(name + ": ", "")));
-		last = s;
+		if (response.trim().equals("") && (laughIfPossible || containsLaugh)) {
+			response = (name + ": " + capitalize(iomanager.getResponses(ResponseType.LAUGH).get(((int) (System.nanoTime() % iomanager.getResponses(ResponseType.LAUGH).size())))));
+			System.out.println(response);
+		}
+		iomanager.log("You: " + message);
+		iomanager.log(name + ": " + (response.replace(name + ": ", "")));
+		lastMessage = message;
 		return true;
 	}
 	
@@ -170,7 +177,7 @@ public final class Genesis {
 	}
 	
 	private static String reversePerson(String s) {
-		return s.replaceAll("(?i)\\byour\\b", "§§m§§y§§").replaceAll("(?i)\\byou\\b", "§§m§§e§§").replaceAll("(?i)\\bme\\b", "you").replaceAll("(?i)\\bmy\\b", "your").replaceAll("(?i)\\byours\\b", "§§mi§§ne§§").replaceAll("(?i)\\bmine\\b", "yours").replace("§§", "").trim();
+		return s.replaceAll("(?i)\\byour\\b", "����m����y����").replaceAll("(?i)\\byou\\b", "����m����e����").replaceAll("(?i)\\bme\\b", "you").replaceAll("(?i)\\bmy\\b", "your").replaceAll("(?i)\\byours\\b", "����mi����ne����").replaceAll("(?i)\\bmine\\b", "yours").replace("����", "").trim();
 	}
 	
 	public static double solve(String c) {
@@ -183,7 +190,7 @@ public final class Genesis {
 				c = c.replaceAll("(\\d)\\.0(\\D)", "$1$2");
 				m = p.matcher(c);
 				if (!m.matches())
-					throw new ArithmeticException();
+					throw new ArithmeticException("Invalid math expression: " + c);
 				switch (m.group(2)) {
 					default:
 						break;
@@ -215,108 +222,103 @@ public final class Genesis {
 		return s.replace("?", "").replace(".", "").replace("!", "").replace(",", "").replace("_", "").replace("~", "").replace("`", "").replace("'", "").replace("\"", "").replace("\\", "").replace(":", "").replace(";", "").replaceAll("(?i)the", " ").replaceAll("(?i)teh", " ").replaceAll("(?i)how\\s+do", "how can").replaceAll("(?i)re", "").replaceAll("(?i)\\s+a ", " ").replaceAll("(?i)is", "").replaceAll("(?i)has", "").replaceAll("(?i)get to", "go to").replaceAll("\\Bs\\b", "").replaceAll(" {2}?", "").trim();
 	}
 	
-	private static String removeEndPunc(String s) {
+	private static String removeEndPunctuation(String s) {
 		return s.replaceAll("[!\\.\\?]+$", "");
 	}
 	
 	private static String format(String s) {
-		return cap(s) + punc();
+		return capitalize(s) + addPunctuation();
 	}
 	
-	private static String cap(String s) {
+	private static String capitalize(String s) {
 		String r = s.toUpperCase();
 		if (s.length() > 1)
 			r = s.replaceFirst(s.substring(0, 1), s.substring(0, 1).toUpperCase());
 		return r;
 	}
 	
-	private static char punc() {
+	private static char addPunctuation() {
 		switch ((int) System.nanoTime() % 5) {
-			default:
 			case 0:
-			case 1:
-			case 2:
-			case 3:
-				return '.';
-			case 4:
 				return '!';
+			default:
+				return '.';
 		}
 	}
 	
-	public FileManager getFileManager() {
-		return fm;
+	public IOManager getIOManager() {
+		return iomanager;
 	}
 	
-	public void printError(Throwable t) {
-		printError(System.err, t);
-		if (fm != null)
-			printError(fm.getLogStream(), t);
-		stop(1);
+	public void logError(Throwable t) {
+		logError(t, 0);
 	}
 	
-	public static void printError(Object output, Throwable t) {
-		printError(output, Thread.currentThread(), t);
+	public void logError(Throwable t, int fatal) {
+		logError(Thread.currentThread(), t, fatal);
 	}
 	
-	private static void printError(Object output, Thread thread, Throwable t) {
-		PrintWriterStream out;
-		if (output instanceof PrintWriter)
-			out = new PrintWriterStream((PrintWriter) output);
-		else if (output instanceof PrintStream)
-			out = new PrintWriterStream((PrintStream) output);
-		else
-			throw new IllegalArgumentException("Output must be of type PrintWriter or PrintStream");
-		out.println();
-		out.println("A fatal error occurred: " + t.toString());
-		out.println("Thread: " + thread.getName());
-		out.println();
-		out.println("-----=[General Stack Trace]=-----");
-		for (StackTraceElement s : t.getStackTrace())
-			//print the throwable's stack trace
-			out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
-		out.println("-----=[" + name + " Stack Trace]=-----");
-		out.println();
-		out.println("-----=[" + name + " Stack Trace]=-----");
+	private static void logError(Thread thread, Throwable t) {
+		logError(thread, t, 0);
+	}
+	
+	private static void logError(Thread thread, Throwable t, int fatal) {
+		IOManager.log(Level.SEVERE, "");
+		IOManager.log(Level.SEVERE, "A fatal error occurred: " + t.toString());
+		IOManager.log(Level.SEVERE, "Thread: " + thread.getName());
+		IOManager.log(Level.SEVERE, "");
+		IOManager.log(Level.SEVERE, "-----=[Full Stack Trace]=-----");
+		for (StackTraceElement s : t.getStackTrace()) //print the throwable's stack trace
+			IOManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+		IOManager.log(Level.SEVERE, "-----=[" + name + " Stack Trace]=-----");
+		IOManager.log(Level.SEVERE, "");
+		IOManager.log(Level.SEVERE, "-----=[" + name + " Stack Trace]=-----");
 		boolean fault = false;
 		for (StackTraceElement s : t.getStackTrace()) { //filter out the stack trace for only Genesis
 			if (s.getClassName().startsWith("genesis")) {
-				out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				IOManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
 				fault = true;
 			}
 		}
 		if (!fault) //if it's not our fault, tell the user
-			out.println("This doesn't look like a problem relating to " + name + ". Check the above general stack trace.");
-		out.println("-----=[Genesis Stack Trace]=-----");
-		out.println();
-		out.println("-----=[Remote Stack Trace]=-----");
+			IOManager.log(Level.SEVERE, "This doesn't look like a problem relating to " + name + ". Check the below remote stack trace.");
+		IOManager.log(Level.SEVERE, "-----=[Genesis Stack Trace]=-----");
+		IOManager.log(Level.SEVERE, "");
+		IOManager.log(Level.SEVERE, "-----=[Remote Stack Trace]=-----");
 		fault = false;
 		for (StackTraceElement s : t.getStackTrace()) { //filter out the stack trace for only outside Genesis
 			if (!s.getClassName().startsWith("genesis")) {
-				out.println(s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				IOManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
 				fault = true;
 			}
 		}
 		if (!fault) //if it's not their fault, tell the user
-			out.println("This doesn't look like a problem with anything outside " + name + ". Check the above " + name + " stack trace.");
-		out.println("-----=[Remote Stack Trace]=-----");
-		out.println();
+			IOManager.log(Level.SEVERE, "This doesn't look like a problem with anything outside " + name + ". Check the above " + name + " stack trace.");
+		IOManager.log(Level.SEVERE, "-----=[Remote Stack Trace]=-----");
+		IOManager.log(Level.SEVERE, "");
+		if (fatal != 0)
+			stop(fatal);
 	}
 	
-	public void log(String message) {
-		log(System.out, message);
+	public static void log(String message) {
+		log(message, false);
 	}
 	
-	public void log(PrintStream out, String message) {
-		FileManager.log(out, message);
-		if (fm != null)
-			fm.log(message);
+	public static void log(String message, boolean withConsole) {
+		log(System.out, message, withConsole);
+	}
+	
+	public static void log(PrintStream out, String message, boolean withConsole) {
+		IOManager.log(Level.INFO, message);
+		if (withConsole)
+			System.out.println(message);
 	}
 	
 	public String toString() {
 		return name + " v" + version;
 	}
 	
-	static class PrintWriterStream { //super hacky way of combining a PrintWriter and a PrintStream
+	static class PrintWriterStream {
 		
 		private PrintWriter w;
 		private PrintStream s;

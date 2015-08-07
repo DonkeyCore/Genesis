@@ -2,15 +2,21 @@ package genesis;
 
 public enum ResponseType {
 	
-	GREETING, FAREWELL, VALUE, LAUGH;
+	GREETING("Greeting"), FAREWELL("Farewell"), VALUE("Value"), LAUGH("Laugh");
+	
+	private final String string;
+	
+	private ResponseType(String string) {
+		this.string = string;
+	}
 	
 	public String toString() {
-		return name();
+		return string;
 	}
 	
 	public static ResponseType getResponseType(String name) {
 		for (ResponseType r : values()) {
-			if (r.name().equalsIgnoreCase(name))
+			if (r.string.equalsIgnoreCase(name))
 				return r;
 		}
 		return null;
