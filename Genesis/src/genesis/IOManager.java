@@ -69,10 +69,10 @@ public final class IOManager {
 			String line;
 			while ((line = r.readLine()) != null) {
 				for (ResponseType rt : ResponseType.values()) {
-					if (line.split("���")[0].equalsIgnoreCase(rt.name())) {
+					if (line.split(":")[0].equalsIgnoreCase(rt.name())) {
 						String response = "";
-						for (int i = 1; i < line.split("���").length; i++)
-							response = line.split("���")[i].trim();
+						for (int i = 1; i < line.split(":").length; i++)
+							response = line.split(":")[i].trim();
 						if (res.get(rt) == null) {
 							List<String> list = new ArrayList<String>();
 							list.add(response);
@@ -95,8 +95,8 @@ public final class IOManager {
 		try (BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
 			String line;
 			while ((line = r.readLine()) != null) {
-				if (line.split("���")[0].equalsIgnoreCase(rt.name()))
-					res.add(line.split("���")[1].trim());
+				if (line.split(":")[0].equalsIgnoreCase(rt.name()))
+					res.add(line.split(":")[1].trim());
 			}
 		} catch (Throwable t) {
 			genesis.logError(t);
@@ -109,10 +109,10 @@ public final class IOManager {
 		try (BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
 			String s;
 			while ((s = r.readLine()) != null) {
-				if (s.equals(type.toString() + "��� " + response))
+				if (s.equals(type.toString() + ": " + response))
 					return;
 			}
-			responseWriter.println(type.toString() + "��� " + response);
+			responseWriter.println(type.toString() + ": " + response);
 			responseWriter.flush();
 		} catch (Throwable t) {
 			genesis.logError(t);
