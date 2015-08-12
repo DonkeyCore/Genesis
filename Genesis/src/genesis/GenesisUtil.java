@@ -75,7 +75,7 @@ public class GenesisUtil {
 	}
 	
 	public static String transform(String s) {
-		return s.replace("?", "").replace(".", "").replace("!", "").replace(",", "").replace("_", "").replace("~", "").replace("`", "").replace("'", "").replace("\"", "").replace("\\", "").replace(":", "").replace(";", "").replaceAll("(?i)the", " ").replaceAll("(?i)teh", " ").replaceAll("(?i)how\\s+do", "how can").replaceAll("(?i)re", "").replaceAll("(?i)\\s+a ", " ").replaceAll("(?i)is", "").replaceAll("(?i)has", "").replaceAll("(?i)get to", "go to").replaceAll("\\Bs\\b", "").replaceAll(" {2}?", "").trim();
+		return s.replace("?", "").replace(".", "").replace("!", "").replace(",", "").replace("_", "").replace("~", "").replace("`", "").replace("'", "").replace("\"", "").replace("\\", "").replace(":", "").replace(";", "").replaceAll("(?i)the", " ").replaceAll("(?i)teh", " ").replaceAll("(?i)how\\s+do", "how can").replaceAll("(?i)re", "").replaceAll("(?i)\\s+a ", " ").replaceAll("(?i)\\s+is\\s+", "").replaceAll("(?i)has", "").replaceAll("(?i)get to", "go to").replaceAll(" {2}?", "").trim();
 	}
 	
 	public static String removeEndPunctuation(String s) {

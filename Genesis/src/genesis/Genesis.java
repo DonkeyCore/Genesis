@@ -127,14 +127,14 @@ public final class Genesis {
 			laughIfPossible = true;
 		}
 		if (!containsLaugh) {
-			String[] set = message.split("(?i)(\\s+is\\s+|\\'s\\s+)");
+			String[] set = message.split("(?i)(\\s+is\\s+|'s\\s+)");
 			try { //if it's math, solve it
 				response = (name + ": " + solve(transform(set[1]).trim()));
 				say(response);
 			} catch (Throwable t) { //it's not math
 				String rawKey = transform(set[0]);
 				if (rawKey.toLowerCase().contains("what")) {
-					String key = transform(reversePerson(join(set, "is", 1)));
+					String key = transform(reversePerson(set[1]));
 					for (String values : iomanager.getResponses(ResponseType.VALUE)) {
 						if (transform(values.split("=")[0]).trim().equalsIgnoreCase(key))
 							response = name + ": " + capitalize(key) + " is " + values.split("=")[1].trim() + addPunctuation();
@@ -142,8 +142,8 @@ public final class Genesis {
 					if (!response.equals(""))
 						say(response);
 				} else if (message.toLowerCase().contains(" is ")) {
-					String key = reversePerson(message.split(" is ")[0].trim());
-					String value = join(message.split("(?i) (is) "), "$1%s", 1).trim();
+					String key = reversePerson(message.split("(?i)\\s+is\\s+")[0].trim());
+					String value = join(message.split("(?i)\\s+is\\s+"), "$1%s", 1).trim();
 					iomanager.setResponse(ResponseType.VALUE, key + "=" + reversePerson(removeEndPunctuation(value)));
 					response = (name + ": " + capitalize(key) + " is " + removeEndPunctuation(value) + addPunctuation());
 					say(response);
