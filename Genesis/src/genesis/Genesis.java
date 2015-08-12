@@ -1,19 +1,24 @@
 package genesis;
 
-import static genesis.GenesisUtil.addPunctuation;
-import static genesis.GenesisUtil.capitalize;
-import static genesis.GenesisUtil.format;
-import static genesis.GenesisUtil.join;
-import static genesis.GenesisUtil.log;
-import static genesis.GenesisUtil.removeEndPunctuation;
-import static genesis.GenesisUtil.reversePerson;
-import static genesis.GenesisUtil.solve;
-import static genesis.GenesisUtil.transform;
+import static genesis.util.GenesisUtil.addPunctuation;
+import static genesis.util.GenesisUtil.capitalize;
+import static genesis.util.GenesisUtil.format;
+import static genesis.util.GenesisUtil.join;
+import static genesis.util.GenesisUtil.log;
+import static genesis.util.GenesisUtil.removeEndPunctuation;
+import static genesis.util.GenesisUtil.reversePerson;
+import static genesis.util.GenesisUtil.solve;
+import static genesis.util.GenesisUtil.transform;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.List;
+
+import genesis.logging.LogManager;
+import genesis.util.GenesisUtil;
+import genesis.util.ResponseType;
+import genesis.util.Speech;
 
 public final class Genesis {
 	
@@ -28,14 +33,14 @@ public final class Genesis {
 		}
 	}
 	
-	private final IOManager iomanager;
+	private final LogManager iomanager;
 	private String lastMessage;
 	
 	public Genesis() throws IOException {
 		Thread.setDefaultUncaughtExceptionHandler(GenesisUtil::logError);
 		log("Initializing " + toString() + "...");
 		log("Generating files...");
-		iomanager = new IOManager(this);
+		iomanager = new LogManager(this);
 		log(toString() + " started on " + System.getProperty("os.name"), true);
 		start();
 		stop();
@@ -165,7 +170,7 @@ public final class Genesis {
 		Speech.say(message.replace(name + ": ", "").trim());
 	}
 	
-	public IOManager getIOManager() {
+	public LogManager getIOManager() {
 		return iomanager;
 	}
 	

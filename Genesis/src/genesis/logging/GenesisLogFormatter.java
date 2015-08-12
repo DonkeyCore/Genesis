@@ -1,4 +1,4 @@
-package genesis;
+package genesis.logging;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;

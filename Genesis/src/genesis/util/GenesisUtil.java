@@ -1,4 +1,4 @@
-package genesis;
+package genesis.util;
 
 import static genesis.Genesis.name;
 import static genesis.Genesis.version;
@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import genesis.logging.LogManager;
 
 public class GenesisUtil {
 	
@@ -107,39 +109,39 @@ public class GenesisUtil {
 	}
 	
 	public static void logError(Thread thread, Throwable t, int fatal) {
-		IOManager.log(Level.SEVERE, "");
-		IOManager.log(Level.SEVERE, "A fatal error occurred: " + t.toString());
-		IOManager.log(Level.SEVERE, "Thread: " + thread.getName());
-		IOManager.log(Level.SEVERE, "");
-		IOManager.log(Level.SEVERE, "-----=[Full Stack Trace]=-----");
+		LogManager.log(Level.SEVERE, "");
+		LogManager.log(Level.SEVERE, "A fatal error occurred: " + t.toString());
+		LogManager.log(Level.SEVERE, "Thread: " + thread.getName());
+		LogManager.log(Level.SEVERE, "");
+		LogManager.log(Level.SEVERE, "-----=[Full Stack Trace]=-----");
 		for (StackTraceElement s : t.getStackTrace()) //print the throwable's stack trace
-			IOManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
-		IOManager.log(Level.SEVERE, "-----=[" + name + " Stack Trace]=-----");
-		IOManager.log(Level.SEVERE, "");
-		IOManager.log(Level.SEVERE, "-----=[" + name + " Stack Trace]=-----");
+			LogManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+		LogManager.log(Level.SEVERE, "-----=[" + name + " Stack Trace]=-----");
+		LogManager.log(Level.SEVERE, "");
+		LogManager.log(Level.SEVERE, "-----=[" + name + " Stack Trace]=-----");
 		boolean fault = false;
 		for (StackTraceElement s : t.getStackTrace()) { //filter out the stack trace for only Genesis
 			if (s.getClassName().startsWith("genesis")) {
-				IOManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				LogManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
 				fault = true;
 			}
 		}
 		if (!fault) //if it's not our fault, tell the user
-			IOManager.log(Level.SEVERE, "This doesn't look like a problem relating to " + name + ". Check the below remote stack trace.");
-		IOManager.log(Level.SEVERE, "-----=[Genesis Stack Trace]=-----");
-		IOManager.log(Level.SEVERE, "");
-		IOManager.log(Level.SEVERE, "-----=[Remote Stack Trace]=-----");
+			LogManager.log(Level.SEVERE, "This doesn't look like a problem relating to " + name + ". Check the below remote stack trace.");
+		LogManager.log(Level.SEVERE, "-----=[Genesis Stack Trace]=-----");
+		LogManager.log(Level.SEVERE, "");
+		LogManager.log(Level.SEVERE, "-----=[Remote Stack Trace]=-----");
 		fault = false;
 		for (StackTraceElement s : t.getStackTrace()) { //filter out the stack trace for only outside Genesis
 			if (!s.getClassName().startsWith("genesis")) {
-				IOManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
+				LogManager.log(Level.SEVERE, s.getClassName() + "." + s.getMethodName() + "() on line " + s.getLineNumber());
 				fault = true;
 			}
 		}
 		if (!fault) //if it's not their fault, tell the user
-			IOManager.log(Level.SEVERE, "This doesn't look like a problem with anything outside " + name + ". Check the above " + name + " stack trace.");
-		IOManager.log(Level.SEVERE, "-----=[Remote Stack Trace]=-----");
-		IOManager.log(Level.SEVERE, "");
+			LogManager.log(Level.SEVERE, "This doesn't look like a problem with anything outside " + name + ". Check the above " + name + " stack trace.");
+		LogManager.log(Level.SEVERE, "-----=[Remote Stack Trace]=-----");
+		LogManager.log(Level.SEVERE, "");
 		if (fatal != 0)
 			stop(fatal);
 	}
@@ -153,7 +155,7 @@ public class GenesisUtil {
 	}
 	
 	public static void log(PrintStream out, String message, boolean withConsole) {
-		IOManager.log(Level.INFO, message);
+		LogManager.log(Level.INFO, message);
 		if (withConsole)
 			System.out.println(message);
 	}

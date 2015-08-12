@@ -1,4 +1,4 @@
-package genesis;
+package genesis.util;
 
 public enum ResponseType {
 	

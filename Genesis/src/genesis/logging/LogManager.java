@@ -1,4 +1,4 @@
-package genesis;
+package genesis.logging;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,7 +14,10 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public final class IOManager {
+import genesis.Genesis;
+import genesis.util.ResponseType;
+
+public final class LogManager {
 	
 	public static final String folderPath = "Genesis/";
 	private static final File genesisFolder = new File(folderPath);
@@ -26,7 +29,7 @@ public final class IOManager {
 	private final Genesis genesis;
 	private final PrintWriter responseWriter;
 	
-	public IOManager(Genesis g) throws IOException {
+	public LogManager(Genesis g) throws IOException {
 		this.genesis = g;
 		genesisFolder.mkdirs();
 		createFiles();
