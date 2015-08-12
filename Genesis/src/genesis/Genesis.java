@@ -19,6 +19,7 @@ import genesis.logging.LogManager;
 import genesis.util.GenesisUtil;
 import genesis.util.ResponseType;
 import genesis.util.Speech;
+import genesis.util.WikipediaFinder;
 
 public final class Genesis {
 	
@@ -146,6 +147,23 @@ public final class Genesis {
 					}
 					if (!response.equals(""))
 						say(response);
+					else {
+						//if we dont have a registered value for this, check with wikipedia and record it
+						String summary = WikipediaFinder.getSummary(key);
+						if(summary != null) {
+							response = (name + ": " + summary);
+							String wikiKey = null, wikiValue = null;
+							if(summary.contains("is")) { //could be singular or plural
+								wikiKey = reversePerson(summary.split("(?i)\\s+is\\s+")[0].trim());
+								wikiValue = join(summary.split("(?i)\\s+is\\s+"), "$1%s", 1).trim();
+							} else {
+								wikiKey = reversePerson(summary.split("(?i)\\s+are\\s+")[0].trim());
+								wikiValue = join(summary.split("(?i)\\s+are\\s+"), "$1%s", 1).trim();
+							}
+							iomanager.setResponse(ResponseType.VALUE, wikiKey + "=" + reversePerson(removeEndPunctuation(wikiValue)));
+							say(response);
+						}
+					}
 				} else if (message.toLowerCase().contains(" is ")) {
 					String key = reversePerson(message.split("(?i)\\s+is\\s+")[0].trim());
 					String value = join(message.split("(?i)\\s+is\\s+"), "$1%s", 1).trim();

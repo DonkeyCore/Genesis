@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.NoSuchFileException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -42,7 +43,7 @@ public final class LogManager {
 				logFile.createNewFile();
 			if (!responsesFile.exists())
 				responsesFile.createNewFile();
-		} catch (IOException e) {
+		} catch(IOException e) {
 			genesis.logError(e);
 		}
 	}
@@ -68,13 +69,13 @@ public final class LogManager {
 		HashMap<ResponseType, List<String>> res = new HashMap<>();
 		if (responsesFile.length() == 0)
 			return res;
-		try (BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
+		try(BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
 			String line;
-			while ((line = r.readLine()) != null) {
-				for (ResponseType rt : ResponseType.values()) {
+			while((line = r.readLine()) != null) {
+				for(ResponseType rt : ResponseType.values()) {
 					if (line.split(":")[0].equalsIgnoreCase(rt.name())) {
 						String response = "";
-						for (int i = 1; i < line.split(":").length; i++)
+						for(int i = 1; i < line.split(":").length; i++)
 							response = line.split(":")[i].trim();
 						if (res.get(rt) == null) {
 							List<String> list = new ArrayList<String>();
@@ -85,7 +86,7 @@ public final class LogManager {
 					}
 				}
 			}
-		} catch (IOException e) {
+		} catch(IOException e) {
 			genesis.logError(e);
 		}
 		return res;
@@ -95,13 +96,13 @@ public final class LogManager {
 		List<String> res = new ArrayList<String>();
 		if (responsesFile.length() == 0)
 			return res;
-		try (BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
+		try(BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
 			String line;
-			while ((line = r.readLine()) != null) {
+			while((line = r.readLine()) != null) {
 				if (line.split(":")[0].equalsIgnoreCase(rt.name()))
 					res.add(line.split(":")[1].trim());
 			}
-		} catch (Throwable t) {
+		} catch(Throwable t) {
 			genesis.logError(t);
 		}
 		return res;
@@ -109,15 +110,15 @@ public final class LogManager {
 	
 	public void setResponse(ResponseType type, String response) {
 		response = response.trim();
-		try (BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
+		try(BufferedReader r = new BufferedReader(new FileReader(responsesFile))) {
 			String s;
-			while ((s = r.readLine()) != null) {
+			while((s = r.readLine()) != null) {
 				if (s.equals(type.toString() + ": " + response))
 					return;
 			}
 			responseWriter.println(type.toString() + ": " + response);
 			responseWriter.flush();
-		} catch (Throwable t) {
+		} catch(Throwable t) {
 			genesis.logError(t);
 		}
 	}
@@ -143,17 +144,21 @@ public final class LogManager {
 		if (logFileHandler != null)
 			return logFileHandler;
 		try {
+			if(!f.exists())
+				f.createNewFile();
 			logFileHandler = new FileHandler(f.getAbsolutePath());
 			parent.addHandler(logFileHandler);
 			parent.setUseParentHandlers(false);
 			logFileHandler.setFormatter(new GenesisLogFormatter());
 			return logFileHandler;
-		} catch (SecurityException e) {
+		} catch(NoSuchFileException e) {
+			//missing log file
 			e.printStackTrace();
-		} catch (IOException e) {
+		} catch(SecurityException e) {
+			e.printStackTrace();
+		} catch(IOException e) {
 			e.printStackTrace();
 		}
 		return null;
 	}
-	
 }
