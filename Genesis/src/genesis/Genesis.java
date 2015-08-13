@@ -139,7 +139,7 @@ public final class Genesis {
 				say(response);
 			} catch(Throwable t) { //it's not math
 				String rawKey = transform(set[0]);
-				if (rawKey.toLowerCase().contains("what")) {
+				if (rawKey.toLowerCase().contains("what") || rawKey.toLowerCase().contains("who")) {
 					String key = transform(reversePerson(set[1]));
 					for(String values : iomanager.getResponses(ResponseType.VALUE)) {
 						if (transform(values.split("=")[0]).trim().equalsIgnoreCase(key))
