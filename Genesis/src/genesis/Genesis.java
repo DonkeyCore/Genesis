@@ -29,7 +29,7 @@ public final class Genesis {
 	public static void main(String... args) {
 		try {
 			new Genesis();
-		} catch (IOException e) {
+		} catch(IOException e) {
 			GenesisUtil.logError(Thread.currentThread(), e);
 		}
 	}
@@ -52,12 +52,12 @@ public final class Genesis {
 	}
 	
 	public void start() {
-		try (BufferedReader r = new BufferedReader(new InputStreamReader(System.in))) {
+		try(BufferedReader r = new BufferedReader(new InputStreamReader(System.in))) {
 			System.out.print("You: ");
 			String s = r.readLine();
 			if (respond(s))
 				start();
-		} catch (Throwable t) {
+		} catch(Throwable t) {
 			if (iomanager != null)
 				logError(t, 1);
 		}
@@ -71,7 +71,7 @@ public final class Genesis {
 			if (message.trim().equalsIgnoreCase("exit"))
 				return false;
 			boolean newGreeting = true;
-			for (String r : iomanager.getResponses(ResponseType.GREETING)) {
+			for(String r : iomanager.getResponses(ResponseType.GREETING)) {
 				if (transform(message).equalsIgnoreCase(transform(r)))
 					newGreeting = false;
 			}
@@ -81,12 +81,12 @@ public final class Genesis {
 			say(response);
 		} else {
 			boolean isGreeting = false;
-			for (String r : iomanager.getResponses(ResponseType.GREETING)) { //check if THE LAST MESSAGE is another greeting
+			for(String r : iomanager.getResponses(ResponseType.GREETING)) { //check if THE LAST MESSAGE is another greeting
 				if (transform(lastMessage).equalsIgnoreCase(transform(r)))
 					isGreeting = true;
 			}
 			boolean isFarewell = false;
-			for (String r : iomanager.getResponses(ResponseType.FAREWELL)) {
+			for(String r : iomanager.getResponses(ResponseType.FAREWELL)) {
 				if (transform(message).equalsIgnoreCase(transform(r)))
 					isFarewell = true;
 			}
@@ -94,7 +94,7 @@ public final class Genesis {
 				List<String> f = iomanager.getResponses(ResponseType.FAREWELL);
 				if (message.equalsIgnoreCase("exit") && !isGreeting) {
 					boolean newFarewell = true;
-					for (String r : f) { //check if it's a new farewell
+					for(String r : f) { //check if it's a new farewell
 						if (transform(lastMessage).equalsIgnoreCase(transform(r)))
 							newFarewell = false;
 					}
@@ -110,13 +110,13 @@ public final class Genesis {
 			}
 		}
 		boolean containsLaugh = false;
-		for (String r : iomanager.getResponses(ResponseType.LAUGH)) {
+		for(String r : iomanager.getResponses(ResponseType.LAUGH)) {
 			if (message.matches(".*?\\b" + r + "\\b.*?"))
 				containsLaugh = true;
 		}
 		boolean laughIfPossible = false;
 		int laughCounter = 0;
-		for (char c : message.toCharArray()) {
+		for(char c : message.toCharArray()) {
 			if (c == 'h' || c == 'l') //measure the h's in l's in a message to determine a laugh (e.g. lolol or haha)
 				laughCounter++;
 		}
@@ -124,7 +124,7 @@ public final class Genesis {
 			return transform(g).equalsIgnoreCase(transform(message));
 		})) {
 			boolean newLaugh = true;
-			for (String r : iomanager.getResponses(ResponseType.LAUGH)) {
+			for(String r : iomanager.getResponses(ResponseType.LAUGH)) {
 				if (transform(message).equalsIgnoreCase(transform(r)))
 					newLaugh = false;
 			}
@@ -137,11 +137,11 @@ public final class Genesis {
 			try { //if it's math, solve it
 				response = (name + ": " + solve(transform(set[1]).trim()));
 				say(response);
-			} catch (Throwable t) { //it's not math
+			} catch(Throwable t) { //it's not math
 				String rawKey = transform(set[0]);
 				if (rawKey.toLowerCase().contains("what")) {
 					String key = transform(reversePerson(set[1]));
-					for (String values : iomanager.getResponses(ResponseType.VALUE)) {
+					for(String values : iomanager.getResponses(ResponseType.VALUE)) {
 						if (transform(values.split("=")[0]).trim().equalsIgnoreCase(key))
 							response = name + ": " + capitalize(key) + " is " + values.split("=")[1].trim() + addPunctuation();
 					}
@@ -150,18 +150,40 @@ public final class Genesis {
 					else {
 						//if we dont have a registered value for this, check with wikipedia and record it
 						String summary = WikipediaFinder.getSummary(key);
-						if(summary != null) {
+						if (summary != null) {
+							boolean flag = true;
 							response = (name + ": " + summary);
 							String wikiKey = null, wikiValue = null;
-							if(summary.contains("is")) { //could be singular or plural
-								wikiKey = reversePerson(summary.split("(?i)\\s+is\\s+")[0].trim());
-								wikiValue = join(summary.split("(?i)\\s+is\\s+"), "$1%s", 1).trim();
-							} else {
-								wikiKey = reversePerson(summary.split("(?i)\\s+are\\s+")[0].trim());
-								wikiValue = join(summary.split("(?i)\\s+are\\s+"), "$1%s", 1).trim();
+							try {
+								if (summary.contains(" is ")) { //could be singular or plural
+									wikiKey = reversePerson(summary.split("(?i)\\s+is\\s+")[0].trim());
+									wikiValue = join(summary.split("(?i)\\s+is\\s+"), "$1%s", 1).trim();
+								} else {
+									wikiKey = reversePerson(summary.split("(?i)\\s+are\\s+")[0].trim());
+									wikiValue = join(summary.split("(?i)\\s+are\\s+"), "$1%s", 1).trim();
+								}
+							} catch(IndexOutOfBoundsException e) {
+								summary = WikipediaFinder.getSummary(key, true);
+								if(summary != null) {
+									try {
+										if (summary.contains(" is ")) { //could be singular or plural
+											wikiKey = reversePerson(summary.split("(?i)\\s+is\\s+")[0].trim());
+											wikiValue = join(summary.split("(?i)\\s+is\\s+"), "$1%s", 1).trim();
+										} else {
+											wikiKey = reversePerson(summary.split("(?i)\\s+are\\s+")[0].trim());
+											wikiValue = join(summary.split("(?i)\\s+are\\s+"), "$1%s", 1).trim();
+										}
+									} catch(IndexOutOfBoundsException e1) {
+										flag = false;
+									}
+								} else
+									flag = false;
 							}
-							iomanager.setResponse(ResponseType.VALUE, wikiKey + "=" + reversePerson(removeEndPunctuation(wikiValue)));
-							say(response);
+							if (flag) {
+								iomanager.setResponse(ResponseType.VALUE, wikiKey.trim() + "=" + reversePerson(removeEndPunctuation(wikiValue)).trim());
+								response = name + ": " + capitalize(wikiKey.replaceAll("\\s+", " ")) + " is " + reversePerson(removeEndPunctuation(wikiValue)).trim() + addPunctuation();
+								say(response);
+							}
 						}
 					}
 				} else if (message.toLowerCase().contains(" is ")) {

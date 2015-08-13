@@ -144,6 +144,7 @@ public final class LogManager {
 		if (logFileHandler != null)
 			return logFileHandler;
 		try {
+			genesisFolder.mkdirs();
 			if(!f.exists())
 				f.createNewFile();
 			logFileHandler = new FileHandler(f.getAbsolutePath());
