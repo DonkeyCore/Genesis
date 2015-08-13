@@ -24,7 +24,7 @@ import genesis.util.WikipediaFinder;
 public final class Genesis {
 	
 	public static final String name = "Genesis";
-	public static final String version = "1.0.1";
+	public static final String version = "1.1";
 	
 	public static void main(String... args) {
 		try {
