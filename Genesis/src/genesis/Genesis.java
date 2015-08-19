@@ -28,7 +28,9 @@ public final class Genesis {
 	
 	public static void main(String... args) {
 		try {
-			new Genesis();
+			Genesis g = new Genesis();
+			g.start();
+			g.stop();
 		} catch(IOException e) {
 			GenesisUtil.logError(Thread.currentThread(), e);
 		}
@@ -43,8 +45,6 @@ public final class Genesis {
 		log("Generating files...");
 		iomanager = new LogManager(this);
 		log(toString() + " started on " + System.getProperty("os.name"), true);
-		start();
-		stop();
 	}
 	
 	public void stop() {
@@ -55,21 +55,25 @@ public final class Genesis {
 		try(BufferedReader r = new BufferedReader(new InputStreamReader(System.in))) {
 			System.out.print("You: ");
 			String s = r.readLine();
-			if (respond(s))
+			String response = respond(s);
+			if (response != null) {
+				if(response.length() > 0)
+					say(response);
 				start();
+			}
 		} catch(Throwable t) {
 			if (iomanager != null)
 				logError(t, 1);
 		}
 	}
 	
-	public boolean respond(String message) {
+	public String respond(String message) {
 		if (message.trim().equals(""))
-			return true;
+			return "";
 		String response = "";
 		if (lastMessage == null) {
 			if (message.trim().equalsIgnoreCase("exit"))
-				return false;
+				return null;
 			boolean newGreeting = true;
 			for(String r : iomanager.getResponses(ResponseType.GREETING)) {
 				if (transform(message).equalsIgnoreCase(transform(r)))
@@ -78,7 +82,6 @@ public final class Genesis {
 			if (newGreeting)
 				iomanager.setResponse(ResponseType.GREETING, removeEndPunctuation(message));
 			response = (name + ": " + format(iomanager.getResponses(ResponseType.GREETING).get((int) (System.nanoTime() % iomanager.getResponses(ResponseType.GREETING).size()))));
-			say(response);
 		} else {
 			boolean isGreeting = false;
 			for(String r : iomanager.getResponses(ResponseType.GREETING)) { //check if THE LAST MESSAGE is another greeting
@@ -104,9 +107,8 @@ public final class Genesis {
 				//say bye back
 				if (f != null && f.size() > 0) {
 					response = (name + ": " + format(f.get((int) (System.nanoTime() % f.size()))));
-					say(response);
 				}
-				return false; //exit the program
+				return null; //exit the program
 			}
 		}
 		boolean containsLaugh = false;
@@ -136,7 +138,6 @@ public final class Genesis {
 			String[] set = message.split("(?i)(\\s+is\\s+|'s\\s+)");
 			try { //if it's math, solve it
 				response = (name + ": " + solve(transform(set[1]).trim()));
-				say(response);
 			} catch(Throwable t) { //it's not math
 				String rawKey = transform(set[0]);
 				if (rawKey.toLowerCase().contains("what") || rawKey.toLowerCase().contains("who")) {
@@ -145,9 +146,7 @@ public final class Genesis {
 						if (transform(values.split("=")[0]).trim().equalsIgnoreCase(key))
 							response = name + ": " + capitalize(key) + " is " + values.split("=")[1].trim() + addPunctuation();
 					}
-					if (!response.equals(""))
-						say(response);
-					else {
+					if(response.equals("")) {
 						//if we dont have a registered value for this, check with wikipedia and record it
 						String summary = WikipediaFinder.getSummary(key);
 						if (summary != null) {
@@ -182,7 +181,6 @@ public final class Genesis {
 							if (flag) {
 								iomanager.setResponse(ResponseType.VALUE, wikiKey.trim() + "=" + reversePerson(removeEndPunctuation(wikiValue)).trim());
 								response = name + ": " + capitalize(wikiKey.replaceAll("\\s+", " ")) + " is " + reversePerson(removeEndPunctuation(wikiValue)).trim() + addPunctuation();
-								say(response);
 							}
 						}
 					}
@@ -191,18 +189,15 @@ public final class Genesis {
 					String value = join(message.split("(?i)\\s+is\\s+"), "$1%s", 1).trim();
 					iomanager.setResponse(ResponseType.VALUE, key + "=" + reversePerson(removeEndPunctuation(value)));
 					response = (name + ": " + capitalize(key) + " is " + removeEndPunctuation(value) + addPunctuation());
-					say(response);
 				}
 			}
 		}
-		if (response.trim().equals("") && (laughIfPossible || containsLaugh)) {
+		if (response.trim().equals("") && (laughIfPossible || containsLaugh))
 			response = (name + ": " + capitalize(iomanager.getResponses(ResponseType.LAUGH).get(((int) (System.nanoTime() % iomanager.getResponses(ResponseType.LAUGH).size())))));
-			say(response);
-		}
 		iomanager.log("You: " + message);
 		iomanager.log(name + ": " + (response.replace(name + ": ", "")));
 		lastMessage = message;
-		return true;
+		return response;
 	}
 	
 	private void say(String message) {
