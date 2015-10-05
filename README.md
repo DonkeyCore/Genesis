@@ -28,8 +28,8 @@ Genesis is limited in its understanding, so you must follow these rules:
   * If the farewell is unfamiliar to Genesis, you must type in `exit` to notify Genesis that the conversation is over.
   * Genesis will then respond with a farewell that it knows. On the first run, it will be identical to what you said before typing `exit`.
 
-By following talking to Genesis while respecting this behavior, the program will function properly.
+By talking to Genesis while respecting this behavior, the program will function properly.
 
 # Feedback
 
-Feedback is very much appreciated. Pull requests are great because I don't really have time to always work on Genesis. Issues are helpful for finding bugs and suggesting features. Thanks!
+Feedback is very much appreciated. Pull requests are great because I don't really have time to always work on Genesis. Issues are very helpful for finding bugs and suggesting features. Thanks!
